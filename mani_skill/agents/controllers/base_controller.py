@@ -208,10 +208,6 @@ class DictController(BaseController):
                 self.single_action_space, n=self.scene.num_envs
             )
 
-    def before_simulation_step(self):
-        for controller in self.controllers.values():
-            controller.before_simulation_step()
-
     def _initialize_action_space(self):
         # Explicitly create a list of key-value tuples
         # Otherwise, spaces.Dict will sort keys if a dict is provided
@@ -313,4 +309,4 @@ class CombinedController(DictController):
 
     def from_action_dict(self, action_dict: dict):
         """Convert a dict of actions to a flat action."""
-        return torch.hstack([action_dict[uid] for uid in self.controllers])
+        return torch.hstack([torch.from_numpy(action_dict[uid]) for uid in self.controllers])

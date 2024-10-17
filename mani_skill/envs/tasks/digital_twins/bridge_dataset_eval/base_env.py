@@ -1,6 +1,7 @@
 """
 Base environment for Bridge dataset environments
 """
+
 import os
 from typing import Dict, List, Literal
 
@@ -15,6 +16,9 @@ from mani_skill.agents.controllers.pd_ee_pose import PDEEPoseControllerConfig
 from mani_skill.agents.controllers.pd_joint_pos import PDJointPosMimicControllerConfig
 from mani_skill.agents.registration import register_agent
 from mani_skill.agents.robots.widowx.widowx import WidowX250S
+from mani_skill.agents.robots.panda_robotiq_2f_85.panda_robotiq_2f_85 import (
+    PandaRobotiqridgeDatasetFlatTable,
+)
 from mani_skill.envs.tasks.digital_twins.base_env import BaseDigitalTwinEnv
 from mani_skill.sensors.camera import CameraConfig
 from mani_skill.utils import common, io_utils, sapien_utils
@@ -24,6 +28,8 @@ from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import SimConfig
 
 BRIDGE_DATASET_ASSET_PATH = ASSET_DIR / "tasks/bridge_v2_real2sim_dataset/"
+
+
 # Real2Sim tuned WidowX250S robot
 @register_agent(asset_download_ids=["widowx250s"])
 class WidowX250SBridgeDatasetFlatTable(WidowX250S):
@@ -156,6 +162,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
 
     MODEL_JSON = "info_bridge_custom_v0.json"
     SUPPORTED_OBS_MODES = ["rgb+segmentation"]
+    SUPPORTED_ROBOTS = ["widowx250s", "panda_robotiq"]
     SUPPORTED_REWARD_MODES = ["none"]
     scene_setting: Literal["flat_table", "sink"] = "flat_table"
     objs: Dict[str, Actor] = dict()
@@ -168,20 +175,34 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         obj_names: List[str],
         xyz_configs: torch.Tensor,
         quat_configs: torch.Tensor,
+        robot: str = "widowx250s",
         **kwargs,
     ):
         self.obj_names = obj_names
+        self.robot = robot
         self.source_obj_name = obj_names[0]
         self.target_obj_name = obj_names[1]
         self.xyz_configs = xyz_configs
         self.quat_configs = quat_configs
+
+        if self.robot == "widowx250s":
+            self.base_link = "base_link"
+        elif self.robot == "panda_robotiq":
+            self.base_link = "panda_link0"
+
         if self.scene_setting == "flat_table":
             self.rgb_overlay_paths = {
                 "3rd_view_camera": str(
                     BRIDGE_DATASET_ASSET_PATH / "real_inpainting/bridge_real_eval_1.png"
                 )
             }
-            robot_cls = WidowX250SBridgeDatasetFlatTable
+            if self.robot == "widowx250s":
+                robot_cls = WidowX250SBridgeDatasetFlatTable
+            elif self.robot == "panda_robotiq":
+                robot_cls = PandaRobotiqridgeDatasetFlatTable
+            else:
+                raise NotImplementedError()
+
         elif self.scene_setting == "sink":
             self.rgb_overlay_paths = {
                 "3rd_view_camera": str(
@@ -217,7 +238,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
             ),
             near=0.01,
             far=100,
-            mount=self.agent.robot.links_map["base_link"],
+            mount=self.agent.robot.links_map[self.base_link],
         )
 
     def _build_actor_helper(
@@ -371,22 +392,44 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
                     self.scene._gpu_fetch_all()
             # measured values for bridge dataset
             if self.scene_setting == "flat_table":
-                qpos = np.array(
-                    [
-                        -0.01840777,
-                        0.0398835,
-                        0.22242722,
-                        -0.00460194,
-                        1.36524296,
-                        0.00153398,
-                        0.037,
-                        0.037,
-                    ]
-                )
+                if self.robot == "widowx250s":
+                    base_pose = sapien.Pose([0.147, 0.028, 0.870], q=[0, 0, 0, 1])
+                    qpos = np.array(
+                        [
+                            -0.01840777,
+                            0.0398835,
+                            0.22242722,
+                            -0.00460194,
+                            1.36524296,
+                            0.00153398,
+                            0.037,
+                            0.037,
+                        ]
+                    )
+                elif self.robot == "panda_robotiq":
+                    base_pose = sapien.Pose([0.25, 0.028, 0.870], q=[0, 0, 0, 1])
+                    qpos = np.array(
+                        [
+                            0.0,
+                            np.pi / 8,
+                            0,
+                            -np.pi * 5 / 8,
+                            0,
+                            np.pi * 3 / 4,
+                            np.pi / 4,
+                            0.04,
+                            0.04,
+                            -0.04,
+                            0.04,
+                            0.04,
+                            -0.04,
+                        ]
+                    )
+                else:
+                    raise NotImplementedError()
 
-                self.agent.robot.set_pose(
-                    sapien.Pose([0.147, 0.028, 0.870], q=[0, 0, 0, 1])
-                )
+
+                self.agent.robot.set_pose(base_pose)
             elif self.scene_setting == "sink":
                 qpos = np.array(
                     [
