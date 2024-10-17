@@ -1,3 +1,5 @@
+import argparse
+
 import gymnasium as gym
 import numpy as np
 import sapien
@@ -6,55 +8,47 @@ from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.utils.wrappers import RecordEpisode
 
 
-import tyro
-from dataclasses import dataclass
-from typing import List, Optional, Annotated, Union
+def parse_args(args=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-e", "--env-id", type=str, default="PushCube-v1", help="The environment ID of the task you want to simulate")
+    parser.add_argument("-r", "--robot", type=str, default=None, help="The robot agent you want to place in the environment")
+    parser.add_argument("-o", "--obs-mode", type=str, default="none")
+    parser.add_argument("-b", "--sim-backend", type=str, default="auto", help="Which simulation backend to use. Can be 'auto', 'cpu', 'gpu'")
+    parser.add_argument("--reward-mode", type=str)
+    parser.add_argument("--num-envs", type=int, default=1, help="Number of environments to run.")
+    parser.add_argument("-c", "--control-mode", type=str)
+    parser.add_argument("--render-mode", type=str, default="rgb_array")
+    parser.add_argument("--shader", default="default", type=str, help="Change shader used for all cameras in the environment for rendering. Default is 'minimal' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer")
+    parser.add_argument("--record-dir", type=str)
+    parser.add_argument("-p", "--pause", action="store_true", help="If using human render mode, auto pauses the simulation upon loading")
+    parser.add_argument("--quiet", action="store_true", help="Disable verbose output.")
+    parser.add_argument(
+        "-s",
+        "--seed",
+        type=int,
+        help="Seed the random actions and simulator. Default is no seed",
+    )
+    args, opts = parser.parse_known_args(args)
 
-@dataclass
-class Args:
-    env_id: Annotated[str, tyro.conf.arg(aliases=["-e"])] = "PushCube-v1"
-    """The environment ID of the task you want to simulate"""
+    # Parse env kwargs
+    if not args.quiet:
+        print("opts:", opts)
+    eval_str = lambda x: eval(x[1:]) if x.startswith("@") else x
+    env_kwargs = dict((x, eval_str(y)) for x, y in zip(opts[0::2], opts[1::2]))
+    if args.robot:
+        env_kwargs["robot"] = args.robot
+    if not args.quiet:
+        print("env_kwargs:", env_kwargs)
+    args.env_kwargs = env_kwargs
 
-    obs_mode: Annotated[str, tyro.conf.arg(aliases=["-o"])] = "none"
-    """Observation mode"""
+    return args
 
-    sim_backend: Annotated[str, tyro.conf.arg(aliases=["-b"])] = "auto"
-    """Which simulation backend to use. Can be 'auto', 'cpu', 'gpu'"""
 
-    reward_mode: Optional[str] = None
-    """Reward mode"""
-
-    num_envs: int = 1
-    """Number of environments to run."""
-
-    control_mode: Annotated[Optional[str], tyro.conf.arg(aliases=["-c"])] = None
-    """Control mode"""
-
-    render_mode: str = "rgb_array"
-    """Render mode"""
-
-    shader: str = "default"
-    """Change shader used for all cameras in the environment for rendering. Default is 'minimal' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer"""
-
-    record_dir: Optional[str] = None
-    """Directory to save recordings"""
-
-    pause: Annotated[bool, tyro.conf.arg(aliases=["-p"])] = False
-    """If using human render mode, auto pauses the simulation upon loading"""
-
-    quiet: bool = False
-    """Disable verbose output."""
-
-    seed: Annotated[Optional[Union[int, List[int]]], tyro.conf.arg(aliases=["-s"])] = None
-    """Seed(s) for random actions and simulator. Can be a single integer or a list of integers. Default is None (no seeds)"""
-
-def main(args: Args):
+def main(args):
     np.set_printoptions(suppress=True, precision=3)
     verbose = not args.quiet
-    if isinstance(args.seed, int):
-        args.seed = [args.seed]
     if args.seed is not None:
-        np.random.seed(args.seed[0])
+        np.random.seed(args.seed)
     parallel_in_single_scene = args.render_mode == "human"
     if args.render_mode == "human" and args.obs_mode in ["sensor_data", "rgb", "rgbd", "depth", "point_cloud"]:
         print("Disabling parallel single scene/GUI render as observation mode is a visual one. Change observation mode to state or state_dict to see a parallel env render")
@@ -73,7 +67,7 @@ def main(args: Args):
         num_envs=args.num_envs,
         sim_backend=args.sim_backend,
         parallel_in_single_scene=parallel_in_single_scene,
-        # **args.env_kwargs
+        **args.env_kwargs
     )
     record_dir = args.record_dir
     if record_dir:
@@ -86,9 +80,8 @@ def main(args: Args):
         print("Control mode", env.unwrapped.control_mode)
         print("Reward mode", env.unwrapped.reward_mode)
 
-    obs, _ = env.reset(seed=args.seed, options=dict(reconfigure=True))
-    if args.seed is not None:
-        env.action_space.seed(args.seed[0])
+    obs, _ = env.reset(seed=args.seed)
+    env.action_space.seed(args.seed)
     if args.render_mode is not None:
         viewer = env.render()
         if isinstance(viewer, sapien.utils.Viewer):
@@ -114,5 +107,4 @@ def main(args: Args):
 
 
 if __name__ == "__main__":
-    parsed_args = tyro.cli(Args)
-    main(parsed_args)
+    main(parse_args())
