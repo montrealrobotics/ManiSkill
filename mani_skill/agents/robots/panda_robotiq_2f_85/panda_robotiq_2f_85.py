@@ -122,6 +122,18 @@ class PandaRobotiq(BaseAgent):
             ee_link=self.ee_link_name,
             urdf_path=self.urdf_path,
         )
+        arm_pd_ee_target_delta_pose_align2 = PDEEPoseControllerConfig(
+            joint_names=self.arm_joint_names,
+            pos_lower=-0.1,
+            pos_upper=0.1,
+            rot_lower=-0.1,
+            rot_upper=0.1,
+            stiffness=self.arm_stiffness,
+            damping=self.arm_damping,
+            force_limit=self.arm_force_limit,
+            ee_link=self.ee_link_name,
+            urdf_path=self.urdf_path,
+        )
         arm_pd_ee_pose = PDEEPoseControllerConfig(
             joint_names=self.arm_joint_names,
             pos_lower=None,
@@ -211,6 +223,9 @@ class PandaRobotiq(BaseAgent):
         )
 
         controller_configs = dict(
+            arm_pd_ee_target_delta_pose_align2_gripper_pd_joint_pos=dict(
+                arm=arm_pd_ee_target_delta_pose_align2, gripper=gripper_pd_joint_pos
+            ),
             pd_joint_delta_pos=dict(
                 arm=arm_pd_joint_delta_pos, gripper=gripper_pd_joint_delta_pos
             ),
@@ -358,9 +373,11 @@ class PandaRobotiqridgeDatasetFlatTable(PandaRobotiq):
             CameraConfig(
                 uid="3rd_view_camera",  # the camera used for real evaluation for the sink setup
                 pose=sapien.Pose(
-                    [-0.00300001, -0.21, 0.39], [-0.907313, 0.0782, -0.36434, -0.194741]
+                    # [-0.00300001, -0.21, 0.39], [-0.907313, 0.0782, -0.36434, -0.194741]
+                    [-0.00300001, -0.21, 0.39], [0.9331967, -0.1159444, 0.255225, 0.2248576]
                 ),
-                entity_uid="panda_link0",
+                # entity_uid="panda_link0",
+                mount=self.robot.links_map["panda_link0"],
                 width=640,
                 # fov=1.5,
                 height=480,

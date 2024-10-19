@@ -14,6 +14,7 @@ from mani_skill.utils.wrappers import RecordEpisode
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--env-id", type=str, required=True)
+    parser.add_argument("-r", "--robot", type=str, default=None, help="The robot agent you want to place in the environment")
     parser.add_argument("-o", "--obs-mode", type=str)
     parser.add_argument("--reward-mode", type=str)
     parser.add_argument("-c", "--control-mode", type=str, default="pd_ee_delta_pose")
@@ -26,6 +27,8 @@ def parse_args():
     print("opts:", opts)
     eval_str = lambda x: eval(x[1:]) if x.startswith("@") else x
     env_kwargs = dict((x, eval_str(y)) for x, y in zip(opts[0::2], opts[1::2]))
+    if args.robot:
+        env_kwargs["robot"] = args.robot
     print("env_kwargs:", env_kwargs)
     args.env_kwargs = env_kwargs
 

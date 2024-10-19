@@ -90,7 +90,7 @@ class BaseDigitalTwinEnv(BaseEnv):
             dtype=torch.int16,
             device=self.device,
         )
-        if self.rgb_overlay_paths is not None:
+        if self._rgb_overlay_images is not None:
             for camera_name in self.rgb_overlay_paths.keys():
                 sensor = self._sensor_configs[camera_name]
                 if isinstance(sensor, CameraConfig):

@@ -189,6 +189,8 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
             self.base_link = "base_link"
         elif self.robot == "panda_robotiq":
             self.base_link = "panda_link0"
+        else:
+            raise NotImplementedError()
 
         if self.scene_setting == "flat_table":
             self.rgb_overlay_paths = {
