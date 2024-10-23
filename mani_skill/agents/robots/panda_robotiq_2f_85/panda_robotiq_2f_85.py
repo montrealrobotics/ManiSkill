@@ -232,7 +232,7 @@ class PandaRobotiq(BaseAgent):
             pd_joint_pos=dict(arm=arm_pd_joint_pos, gripper=gripper_pd_joint_pos),
             pd_ee_delta_pos=dict(arm=arm_pd_ee_delta_pos, gripper=gripper_pd_joint_pos),
             pd_ee_delta_pose=dict(
-                arm=arm_pd_ee_delta_pose, gripper=gripper_pd_joint_pos
+                arm=arm_pd_ee_delta_pose, gripper=gripper_pd_joint_delta_pos,
             ),
             pd_ee_pose=dict(arm=arm_pd_ee_pose, gripper=gripper_pd_joint_pos),
             # TODO(jigu): how to add boundaries for the following controllers
