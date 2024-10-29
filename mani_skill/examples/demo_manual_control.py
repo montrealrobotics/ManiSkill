@@ -194,9 +194,9 @@ def main():
         # Gripper
         if has_gripper:
             if key == "f":  # open gripper
-                gripper_action = 1
+                gripper_action = 0
             elif key == "g":  # close gripper
-                gripper_action = -1
+                gripper_action = 0.81
 
         # Other functions
         if key == "0":  # switch to SAPIEN viewer
@@ -225,7 +225,7 @@ def main():
         # -------------------------------------------------------------------------- #
         # Post-process action
         # -------------------------------------------------------------------------- #
-        action_dict = dict(base=base_action, arm=ee_action, body=body_action, gripper=np.array([gripper_action]))
+        action_dict = dict(base=base_action, arm=ee_action, body=body_action, gripper=np.array([gripper_action]), passive_finger_joints=np.array([]))
         action = env.agent.controller.from_action_dict(action_dict)
 
         obs, reward, terminated, truncated, info = env.step(action)

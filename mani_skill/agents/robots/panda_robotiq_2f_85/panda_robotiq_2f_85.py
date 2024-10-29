@@ -41,12 +41,12 @@ class PandaRobotiq(BaseAgent):
                     0,
                     np.pi * 3 / 4,
                     np.pi / 4,
-                    0.04,
-                    0.04,
-                    -0.04,
-                    0.04,
-                    0.04,
-                    -0.04,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
                 ]
             ),
             pose=sapien.Pose(),
@@ -63,7 +63,7 @@ class PandaRobotiq(BaseAgent):
         "panda_joint7",
     ]
 
-    ee_link_name = "panda_link_ee" #"robotiq_hand_tcp"
+    ee_link_name = "panda_link_ee"  # "robotiq_hand_tcp" panda_link_ee"
 
     arm_stiffness = 1e3
     arm_damping = 1e2
@@ -71,7 +71,8 @@ class PandaRobotiq(BaseAgent):
 
     gripper_stiffness = 1e5
     gripper_damping = 1e3
-    gripper_force_limit = 100
+    gripper_force_limit = 0.1
+    gripper_friction = 0.05
 
     @property
     def _controller_configs(self):
@@ -207,7 +208,7 @@ class PandaRobotiq(BaseAgent):
             stiffness=self.gripper_stiffness,
             damping=self.gripper_damping,
             force_limit=self.gripper_force_limit,
-            friction=0.05,
+            friction=self.gripper_friction,
             normalize_action=False,
         )
         gripper_pd_joint_delta_pos = PDJointPosMimicControllerConfig(
@@ -218,7 +219,7 @@ class PandaRobotiq(BaseAgent):
             damping=self.gripper_damping,
             force_limit=self.gripper_force_limit,
             normalize_action=True,
-            friction=0.05,
+            friction=self.gripper_friction,
             use_delta=True,
         )
 
@@ -232,7 +233,9 @@ class PandaRobotiq(BaseAgent):
             pd_joint_pos=dict(arm=arm_pd_joint_pos, gripper=gripper_pd_joint_pos),
             pd_ee_delta_pos=dict(arm=arm_pd_ee_delta_pos, gripper=gripper_pd_joint_pos),
             pd_ee_delta_pose=dict(
-                arm=arm_pd_ee_delta_pose, gripper=gripper_pd_joint_delta_pos,
+                arm=arm_pd_ee_delta_pose,
+                gripper=gripper_pd_joint_pos,
+                passive_finger_joints=passive_finger_joints,
             ),
             pd_ee_pose=dict(arm=arm_pd_ee_pose, gripper=gripper_pd_joint_pos),
             # TODO(jigu): how to add boundaries for the following controllers
@@ -257,7 +260,7 @@ class PandaRobotiq(BaseAgent):
 
         # Make a deepcopy in case users modify any config
         return deepcopy_dict(controller_configs)
-    
+
     def _after_loading_articulation(self):
         outer_finger = self.robot.active_joints_map["right_inner_finger_joint"]
         inner_knuckle = self.robot.active_joints_map["right_inner_knuckle_joint"]
@@ -341,13 +344,21 @@ class PandaRobotiq(BaseAgent):
         assert isinstance(actor, Actor), type(actor)
         contacts = self.scene.get_contacts()
 
-        limpulse = sapien_utils.get_pairwise_contact_impulse(contacts, self.finger1pad_link, actor)
-        rimpulse = sapien_utils.get_pairwise_contact_impulse(contacts, self.finger2pad_link, actor)
+        limpulse = sapien_utils.get_pairwise_contact_impulse(
+            contacts, self.finger1pad_link, actor
+        )
+        rimpulse = sapien_utils.get_pairwise_contact_impulse(
+            contacts, self.finger2pad_link, actor
+        )
 
         return (
             np.linalg.norm(limpulse) >= min_impulse,
             np.linalg.norm(rimpulse) >= min_impulse,
         )
+
+    def is_static(self, threshold: float = 0.2):
+        qvel = self.robot.get_qvel()[..., :-1]
+        return torch.max(torch.abs(qvel), 1)[0] <= threshold
 
     @staticmethod
     def build_grasp_pose(approaching, closing, center):
@@ -374,7 +385,8 @@ class PandaRobotiqridgeDatasetFlatTable(PandaRobotiq):
                 uid="3rd_view_camera",  # the camera used for real evaluation for the sink setup
                 pose=sapien.Pose(
                     # [-0.00300001, -0.21, 0.39], [-0.907313, 0.0782, -0.36434, -0.194741]
-                    [-0.00300001, -0.21, 0.39], [0.9331967, -0.1159444, 0.255225, 0.2248576]
+                    [-0.00300001, -0.21, 0.39],
+                    [0.9331967, -0.1159444, 0.255225, 0.2248576],
                 ),
                 # entity_uid="panda_link0",
                 mount=self.robot.links_map["panda_link0"],
