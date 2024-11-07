@@ -34,13 +34,13 @@ class PandaRobotiq(BaseAgent):
         rest=Keyframe(
             qpos=np.array(
                 [
+                    0,
+                    -1 / 5 * np.pi,
+                    0,
+                    -4 / 5 * np.pi,
+                    0,
+                    3 / 5 * np.pi,
                     0.0,
-                    np.pi / 8,
-                    0,
-                    -np.pi * 5 / 8,
-                    0,
-                    np.pi * 3 / 4,
-                    np.pi / 4,
                     0.0,
                     0.0,
                     0.0,
@@ -63,10 +63,28 @@ class PandaRobotiq(BaseAgent):
         "panda_joint7",
     ]
 
-    ee_link_name = "panda_link_ee"  # "robotiq_hand_tcp" panda_link_ee"
+    ee_link_name = "robotiq_hand_tcp"  # "robotiq_hand_tcp" panda_link_ee"
 
-    arm_stiffness = 1e3
-    arm_damping = 1e2
+    # arm_stiffness = 1e3
+    arm_stiffness = [
+        1189.578752213823,
+        1379.9426891074881,
+        779.9513351321253,
+        892.7242889639874,
+        600.0,
+        600.0,
+        707.7313445520906,
+    ]
+    # arm_damping = 1e2
+    arm_damping = [
+        110.91641016880158,
+        76.60497601124099,
+        186.18323463746594,
+        50.0,
+        250.0,
+        250.0,
+        156.0774747573599,
+    ]
     arm_force_limit = 100
 
     gripper_stiffness = 1e5
