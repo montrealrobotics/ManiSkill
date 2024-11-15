@@ -15,7 +15,7 @@ from mani_skill.sensors.camera import CameraConfig
 @register_agent()
 class PandaRobotiq(BaseAgent):
     uid = "panda_robotiq"
-    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/panda/panda_robotiq_85_alt_2.urdf"
+    urdf_path = f"{PACKAGE_ASSET_DIR}/robots/panda/panda_robotiq_85.urdf"
     urdf_config = dict(
         _materials=dict(
             gripper=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
@@ -63,19 +63,19 @@ class PandaRobotiq(BaseAgent):
         "panda_joint7",
     ]
 
-    ee_link_name = "robotiq_hand_tcp"  # "robotiq_hand_tcp" panda_link_ee"
+    ee_link_name = "panda_link_ee"  # "robotiq_hand_tcp" panda_link_ee"
 
-    # arm_stiffness = 1e3
-    arm_stiffness = [
-        1189.578752213823,
-        1379.9426891074881,
-        779.9513351321253,
-        892.7242889639874,
-        600.0,
-        600.0,
-        707.7313445520906,
-    ]
-    # arm_damping = 1e2
+    arm_stiffness = 1e3
+    # arm_stiffness = [
+    #     1189.578752213823,
+    #     1379.9426891074881,
+    #     779.9513351321253,
+    #     892.7242889639874,
+    #     600.0,
+    #     600.0,
+    #     707.7313445520906,
+    # ]
+    arm_damping = 1e2
     arm_damping = [
         110.91641016880158,
         76.60497601124099,
@@ -402,9 +402,8 @@ class PandaRobotiqridgeDatasetFlatTable(PandaRobotiq):
             CameraConfig(
                 uid="3rd_view_camera",  # the camera used for real evaluation for the sink setup
                 pose=sapien.Pose(
-                    # [-0.00300001, -0.21, 0.39], [-0.907313, 0.0782, -0.36434, -0.194741]
-                    [-0.00300001, -0.21, 0.39],
-                    [0.9331967, -0.1159444, 0.255225, 0.2248576],
+                    [-0.00300001, -0.21, 0.39], # [-0.00300001, -0.21, 0.39], [0.1, -0.12, 0.39] [0.25, -0.12, 0.36] [0.1470000, -0.21, 0.25]
+                    [0.9331967, -0.1159444, 0.255225, 0.2248576], # [0.9331967, -0.1159444, 0.255225, 0.2248576] [-0.907313, 0.0782, -0.36434, -0.194741] 
                 ),
                 # entity_uid="panda_link0",
                 mount=self.robot.links_map["panda_link0"],

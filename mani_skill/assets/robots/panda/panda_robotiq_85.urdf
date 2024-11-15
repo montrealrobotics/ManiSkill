@@ -208,7 +208,7 @@
   <joint name="panda_joint_ee" type="fixed">
     <parent link="panda_link7" />
     <child link="panda_link_ee" />
-    <origin rpy="0 0 0" xyz="0 0 0.10" /> 
+    <origin rpy="0 0 0" xyz="0 0 0.107" /> 
   </joint>
   <link name="panda_link_ee">
     <inertial>
