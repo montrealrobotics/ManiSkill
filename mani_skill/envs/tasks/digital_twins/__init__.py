@@ -1,1 +1,1 @@
-from .bridge_dataset_eval import PutCarrotOnPlateInScene
+from .bridge_dataset_eval import *

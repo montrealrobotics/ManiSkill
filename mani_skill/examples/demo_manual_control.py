@@ -7,14 +7,13 @@ import numpy as np
 
 signal.signal(signal.SIGINT, signal.SIG_DFL) # allow ctrl+c
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.utils import visualization
+from mani_skill.utils import common, visualization
 from mani_skill.utils.wrappers import RecordEpisode
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--env-id", type=str, required=True)
-    parser.add_argument("-r", "--robot", type=str, default=None, help="The robot agent you want to place in the environment")
     parser.add_argument("-o", "--obs-mode", type=str)
     parser.add_argument("--reward-mode", type=str)
     parser.add_argument("-c", "--control-mode", type=str, default="pd_ee_delta_pose")
@@ -27,8 +26,6 @@ def parse_args():
     print("opts:", opts)
     eval_str = lambda x: eval(x[1:]) if x.startswith("@") else x
     env_kwargs = dict((x, eval_str(y)) for x, y in zip(opts[0::2], opts[1::2]))
-    if args.robot:
-        env_kwargs["robot"] = args.robot
     print("env_kwargs:", env_kwargs)
     args.env_kwargs = env_kwargs
 
@@ -194,9 +191,9 @@ def main():
         # Gripper
         if has_gripper:
             if key == "f":  # open gripper
-                gripper_action = 0
+                gripper_action = 1
             elif key == "g":  # close gripper
-                gripper_action = 0.81
+                gripper_action = -1
 
         # Other functions
         if key == "0":  # switch to SAPIEN viewer
@@ -225,7 +222,8 @@ def main():
         # -------------------------------------------------------------------------- #
         # Post-process action
         # -------------------------------------------------------------------------- #
-        action_dict = dict(base=base_action, arm=ee_action, body=body_action, gripper=np.array([gripper_action]), passive_finger_joints=np.array([]))
+        action_dict = dict(base=base_action, arm=ee_action, body=body_action, gripper=gripper_action)
+        action_dict = common.to_tensor(action_dict)
         action = env.agent.controller.from_action_dict(action_dict)
 
         obs, reward, terminated, truncated, info = env.step(action)

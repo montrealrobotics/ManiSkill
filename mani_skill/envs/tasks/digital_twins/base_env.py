@@ -90,16 +90,18 @@ class BaseDigitalTwinEnv(BaseEnv):
             dtype=torch.int16,
             device=self.device,
         )
-        if self._rgb_overlay_images is not None:
-            for camera_name in self.rgb_overlay_paths.keys():
-                sensor = self._sensor_configs[camera_name]
-                if isinstance(sensor, CameraConfig):
-                    rgb_overlay_img = cv2.resize(
-                        self._rgb_overlay_images[camera_name], (sensor.width, sensor.height)
-                    )
-                    self._rgb_overlay_images[camera_name] = common.to_tensor(
-                        rgb_overlay_img
-                    )
+
+        for camera_name in self.rgb_overlay_paths.keys():
+            sensor = self._sensor_configs[camera_name]
+            if isinstance(sensor, CameraConfig):
+                if isinstance(self._rgb_overlay_images[camera_name], torch.Tensor):
+                    continue
+                rgb_overlay_img = cv2.resize(
+                    self._rgb_overlay_images[camera_name], (sensor.width, sensor.height)
+                )
+                self._rgb_overlay_images[camera_name] = common.to_tensor(
+                    rgb_overlay_img, device=self.device
+                )
 
     def _green_sceen_rgb(self, rgb, segmentation, overlay_img):
         """returns green screened RGB data given a batch of RGB and segmentation images and one overlay image"""
