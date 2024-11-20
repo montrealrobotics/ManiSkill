@@ -11,7 +11,7 @@ import torch
 from sapien.physx import PhysxMaterial
 from transforms3d.quaternions import quat2mat
 
-from mani_skill import ASSET_DIR
+from mani_skill import ASSET_DIR, PACKAGE_ASSET_DIR
 from mani_skill.agents.controllers.pd_ee_pose import PDEEPoseControllerConfig
 from mani_skill.agents.controllers.pd_joint_pos import PDJointPosMimicControllerConfig
 from mani_skill.agents.registration import register_agent
@@ -192,7 +192,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         else:
             raise NotImplementedError()
 
-        if self.scene_setting == "flat_table":
+        if self.scene_setting == "flat_table" or self.scene_setting == "sep_flat_table":
             self.rgb_overlay_paths = {
                 "3rd_view_camera": str(
                     BRIDGE_DATASET_ASSET_PATH / "real_inpainting/bridge_real_eval_1.png"
@@ -307,7 +307,8 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         scene_offset = np.array([-2.0634, -2.8313, 0.0])
         if self.scene_setting == "flat_table":
             scene_file = str(BRIDGE_DATASET_ASSET_PATH / "stages/bridge_table_1_v1.glb")
-
+        elif self.scene_setting == "sep_flat_table":
+            scene_file = str(PACKAGE_ASSET_DIR / "separate_table/bridge_table_1_v3.glb")
         elif self.scene_setting == "sink":
             scene_file = str(BRIDGE_DATASET_ASSET_PATH / "stages/bridge_table_1_v2.glb")
         builder.add_nonconvex_collision_from_file(scene_file, pose=scene_pose)
@@ -315,6 +316,14 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
 
         builder.initial_pose = sapien.Pose(-scene_offset)
         builder.build_static(name="arena")
+
+        if self.scene_setting == "sep_flat_table":
+            builder_table = self.scene.create_actor_builder()
+            table_file = str(PACKAGE_ASSET_DIR / "separate_table/bridge_table_2_v3.glb")
+            builder_table.add_nonconvex_collision_from_file(table_file, pose=scene_pose)
+            builder_table.add_visual_from_file(table_file, pose=scene_pose)
+            builder_table.initial_pose = sapien.Pose(-scene_offset)
+            builder_table.build_kinematic(name="sep_flat_table")
 
         for name in self.obj_names:
             self.objs[name] = self._build_actor_helper(name)
@@ -393,7 +402,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
                 if self.gpu_sim_enabled:
                     self.scene._gpu_fetch_all()
             # measured values for bridge dataset
-            if self.scene_setting == "flat_table":
+            if self.scene_setting == "flat_table" or self.scene_setting == "sep_flat_table":
                 if self.robot == "widowx250s":
                     base_pose = sapien.Pose([0.147, 0.028, 0.870], q=[0, 0, 0, 1])
                     qpos = np.array(

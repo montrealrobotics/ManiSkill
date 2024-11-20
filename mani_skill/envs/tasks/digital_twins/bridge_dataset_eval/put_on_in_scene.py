@@ -66,7 +66,17 @@ class PutCarrotOnPlateInScene(BaseBridgeEnv):
     def get_language_instruction(self, **kwargs):
         return ["put carrot on plate"] * self.num_envs
 
-
+@register_env(
+    "PutCarrotOnPlateInSceneSep-v1",
+    max_episode_steps=60,
+    asset_download_ids=["bridge_v2_real2sim"],
+)
+class PutCarrotOnPlateInSceneSep(PutCarrotOnPlateInScene):
+    scene_setting = "sep_flat_table"
+    rgb_always_overlay_objects = ["sep_flat_table"]
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+    
 @register_env(
     "PutEggplantInBasketScene-v1",
     max_episode_steps=120,
