@@ -74,8 +74,14 @@ class PutCarrotOnPlateInScene(BaseBridgeEnv):
 class PutCarrotOnPlateInSceneSep(PutCarrotOnPlateInScene):
     scene_setting = "sep_flat_table"
     rgb_always_overlay_objects = ["sep_flat_table"]
+    SUPPORTED_OBS_MODES = ["rgb+segmentation", "state", "state_dict"]
+    SUPPORTED_REWARD_MODES = ["sparse", "dense"]
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+    def _get_obs_extra(self, info):
+        return {"source_obj_pose": self.objs[self.source_obj_name].pose.raw_pose,
+                "target_obj_pose": self.objs[self.target_obj_name].pose.p}
     
 @register_env(
     "PutEggplantInBasketScene-v1",

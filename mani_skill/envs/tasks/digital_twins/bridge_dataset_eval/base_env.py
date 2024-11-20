@@ -164,7 +164,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
     SUPPORTED_OBS_MODES = ["rgb+segmentation"]
     SUPPORTED_ROBOTS = ["widowx250s", "panda_robotiq"]
     SUPPORTED_REWARD_MODES = ["none"]
-    scene_setting: Literal["flat_table", "sink"] = "flat_table"
+    scene_setting: Literal["sep_flat_table", "flat_table", "sink"] = "flat_table"
     objs: Dict[str, Actor] = dict()
 
     obj_static_friction = 0.5
