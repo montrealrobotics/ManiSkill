@@ -163,7 +163,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
     MODEL_JSON = "info_bridge_custom_v0.json"
     SUPPORTED_OBS_MODES = ["rgb+segmentation"]
     SUPPORTED_ROBOTS = ["widowx250s", "panda_robotiq"]
-    SUPPORTED_REWARD_MODES = ["none"]
+    SUPPORTED_REWARD_MODES = ["none", "dense"]
     scene_setting: Literal["flat_table", "sink"] = "flat_table"
 
     obj_static_friction = 0.5
@@ -174,7 +174,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         obj_names: List[str],
         xyz_configs: torch.Tensor,
         quat_configs: torch.Tensor,
-        robot: str = "widowx250s",
+        robot: str = "panda_robotiq",
         **kwargs,
     ):
         self.objs: Dict[str, Actor] = dict()

@@ -63,7 +63,7 @@ class PandaRobotiq(BaseAgent):
         "panda_joint7",
     ]
 
-    ee_link_name = "panda_link_ee"  # "robotiq_hand_tcp" panda_link_ee"
+    ee_link_name = "robotiq_hand_tcp"  # "robotiq_hand_tcp" panda_link_ee"
 
     arm_stiffness = 1e3
     # arm_stiffness = [
@@ -388,7 +388,7 @@ class PandaRobotiq(BaseAgent):
         T = np.eye(4)
         T[:3, :3] = np.stack([ortho, closing, approaching], axis=1)
         T[:3, 3] = center
-        return sapien.Pose.from_transformation_matrix(T)
+        return sapien.Pose(T)
 
 
 # Tuned for the sink setup
