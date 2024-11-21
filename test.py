@@ -9,21 +9,26 @@ from mani_skill.sensors.camera import camera_observations_to_images
 
 env: BaseEnv = gym.make(
   "PutCarrotOnPlateInSceneSep-v1",
-  obs_mode="rgb+segmentation",
+  obs_mode="state_dict",
   render_mode="human",
   num_envs=1, # if num_envs > 1, GPU simulation backend is used.
+  reward_mode = "dense",
 )
 obs, _ = env.reset()
-print(obs)
-images = camera_observations_to_images(obs["sensor_data"]["3rd_view_camera"])
-rgb = np.concatenate(images["rgb"].cpu().numpy(), axis=1)
-segment = np.concatenate(images["segmentation"].cpu().numpy(), axis=1)
+print(obs.keys())
+print(obs["agent"])
+print(obs["extra"])
+# images = camera_observations_to_images(obs["sensor_data"]["3rd_view_camera"])
+# rgb = np.concatenate(images["rgb"].cpu().numpy(), axis=1)
+# segment = np.concatenate(images["segmentation"].cpu().numpy(), axis=1)
 
-combined = np.concatenate([rgb, segment], axis=0)
-plt.imshow(combined)
-plt.show()
+# combined = np.concatenate([rgb, segment], axis=0)
+# plt.imshow(combined)
+# plt.show()
 
-# while True:
-#     action = env.action_space.sample() # replace this with your policy inference
-#     obs, reward, terminated, truncated, info = env.step(action)
-#     env.render()
+while True:
+    action = env.action_space.sample() # replace this with your policy inference
+    print(action)
+    obs, reward, terminated, truncated, info = env.step(action)
+    env.render()
+    print("reward", reward)
