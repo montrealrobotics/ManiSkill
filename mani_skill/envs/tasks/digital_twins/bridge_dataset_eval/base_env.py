@@ -532,21 +532,21 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         target_obj_pose = target_object.pose
 
         # whether moved the correct object
-        source_obj_xy_move_dist = torch.linalg.norm(
-            self.episode_source_obj_xyz_after_settle[:, :2] - source_obj_pose.p[:, :2],
-            dim=1,
-        )
-        other_obj_xy_move_dist = []
-        for obj_name in self.objs.keys():
-            obj = self.objs[obj_name]
-            obj_xyz_after_settle = self.episode_obj_xyzs_after_settle[obj_name]
-            if obj.name == self.source_obj_name:
-                continue
-            other_obj_xy_move_dist.append(
-                torch.linalg.norm(
-                    obj_xyz_after_settle[:, :2] - obj.pose.p[:, :2], dim=1
-                )
-            )
+        # source_obj_xy_move_dist = torch.linalg.norm(
+        #     self.episode_source_obj_xyz_after_settle[:, :2] - source_obj_pose.p[:, :2],
+        #     dim=1,
+        # )
+        # other_obj_xy_move_dist = []
+        # for obj_name in self.objs.keys():
+        #     obj = self.objs[obj_name]
+        #     obj_xyz_after_settle = self.episode_obj_xyzs_after_settle[obj_name]
+        #     if obj.name == self.source_obj_name:
+        #         continue
+        #     other_obj_xy_move_dist.append(
+        #         torch.linalg.norm(
+        #             obj_xyz_after_settle[:, :2] - obj.pose.p[:, :2], dim=1
+        #         )
+        #     )
         # moved_correct_obj = (source_obj_xy_move_dist > 0.03) and (
         #     all([x < source_obj_xy_move_dist for x in other_obj_xy_move_dist])
         # )
@@ -557,11 +557,11 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         # moved_wrong_obj = False
 
         # whether the source object is grasped
-        is_src_obj_grasped = self.agent.is_grasping(source_object)
+        # is_src_obj_grasped = self.agent.is_grasping(source_object)
         # if is_src_obj_grasped:
-        self.consecutive_grasp += is_src_obj_grasped
-        self.consecutive_grasp[is_src_obj_grasped == 0] = 0
-        consecutive_grasp = self.consecutive_grasp >= 5
+        # self.consecutive_grasp += is_src_obj_grasped
+        # self.consecutive_grasp[is_src_obj_grasped == 0] = 0
+        # consecutive_grasp = self.consecutive_grasp >= 5
 
         # whether the source object is on the target object based on bounding box position
         tgt_obj_half_length_bbox = (
@@ -596,12 +596,12 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         # self.episode_stats["moved_correct_obj"] = moved_correct_obj
         # self.episode_stats["moved_wrong_obj"] = moved_wrong_obj
         self.episode_stats["src_on_target"] = src_on_target
-        self.episode_stats["is_src_obj_grasped"] = (
-            self.episode_stats["is_src_obj_grasped"] | is_src_obj_grasped
-        )
-        self.episode_stats["consecutive_grasp"] = (
-            self.episode_stats["consecutive_grasp"] | consecutive_grasp
-        )
+        # self.episode_stats["is_src_obj_grasped"] = (
+        #     self.episode_stats["is_src_obj_grasped"] | is_src_obj_grasped
+        # )
+        # self.episode_stats["consecutive_grasp"] = (
+        #     self.episode_stats["consecutive_grasp"] | consecutive_grasp
+        # )
 
         return dict(**self.episode_stats, success=success)
 

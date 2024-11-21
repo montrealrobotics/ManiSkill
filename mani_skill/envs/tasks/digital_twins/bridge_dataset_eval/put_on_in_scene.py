@@ -88,10 +88,7 @@ class PutCarrotOnPlateInSceneSep(PutCarrotOnPlateInScene):
         target_object = self.objs[self.target_obj_name]
         source_obj_pos = source_object.pose.p
         target_obj_pos = target_object.pose.p
-        print("shape:", target_obj_pos.shape)
-        print(info["success"])
         dist = torch.square(target_obj_pos-source_obj_pos).sum(axis=-1).sqrt()
-        print(dist.shape, torch.ones(self.num_envs, dtype=torch.float, device=self.device).shape)
         if "success" in info:
             reward = torch.where(info["success"], torch.ones(self.num_envs, dtype=torch.float, device=self.device), -dist)
         else:
