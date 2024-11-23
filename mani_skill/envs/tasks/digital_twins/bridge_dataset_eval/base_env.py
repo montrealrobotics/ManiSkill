@@ -128,7 +128,7 @@ class WidowX250SBridgeDatasetFlatTable(WidowX250S):
         controller = dict(
             arm=arm_pd_ee_target_delta_pose_align2, gripper=gripper_pd_joint_pos
         )
-        return dict(arm_pd_ee_target_delta_pose_align2_gripper_pd_joint_pos=controller)
+        return dict(**super()._controller_configs, arm_pd_ee_target_delta_pose_align2_gripper_pd_joint_pos=controller)
 
 
 # Tuned for the sink setup
@@ -218,23 +218,11 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
             BRIDGE_DATASET_ASSET_PATH / "custom/" / self.MODEL_JSON
         )
 
-        self.consecutive_grasp = torch.zeros((num_envs,), dtype=torch.int32, device="cuda")
-        self.episode_stats = dict(
-            # all_obj_keep_height=torch.zeros((num_envs,), dtype=torch.bool),
-            moved_correct_obj=torch.zeros((num_envs,), dtype=torch.bool, device="cuda"),
-            moved_wrong_obj=torch.zeros((num_envs,), dtype=torch.bool, device="cuda"),
-            # near_tgt_obj=torch.zeros((num_envs,), dtype=torch.bool),
-            is_src_obj_grasped=torch.zeros((num_envs,), dtype=torch.bool, device="cuda"),
-            # is_closest_to_tgt=torch.zeros((num_envs,), dtype=torch.bool),
-            consecutive_grasp=torch.zeros((num_envs,), dtype=torch.bool, device="cuda"),
-            src_on_target=torch.zeros((num_envs,), dtype=torch.bool, device="cuda"),
-        )
-
         super().__init__(
             robot_uids=robot_cls,
             num_envs=num_envs,
             **kwargs,
-        )
+        )     
 
     @property
     def _default_sim_config(self):
@@ -390,6 +378,18 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
             else:
                 raise ValueError(f"Model {model_id} does not have bbox info.")
         self.episode_model_bbox_sizes = model_bbox_sizes
+
+        self.consecutive_grasp = torch.zeros((self.num_envs,), dtype=torch.int32, device=self.device)
+        self.episode_stats = dict(
+            # all_obj_keep_height=torch.zeros((self.num_envs,), dtype=torch.bool),
+            moved_correct_obj=torch.zeros((self.num_envs,), dtype=torch.bool, device=self.device),
+            moved_wrong_obj=torch.zeros((self.num_envs,), dtype=torch.bool, device=self.device),
+            # near_tgt_obj=torch.zeros((self.num_envs,), dtype=torch.bool),
+            is_src_obj_grasped=torch.zeros((self.num_envs,), dtype=torch.bool, device=self.device),
+            # is_closest_to_tgt=torch.zeros((self.num_envs,), dtype=torch.bool),
+            consecutive_grasp=torch.zeros((self.num_envs,), dtype=torch.bool, device=self.device),
+            src_on_target=torch.zeros((self.num_envs,), dtype=torch.bool, device=self.device),
+        )
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         # NOTE: this part of code is not GPU parallelized
@@ -609,7 +609,6 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
             src_on_target = src_on_target & (net_forces > 0.05)
 
         success = src_on_target
-
         self.episode_stats["moved_correct_obj"] = moved_correct_obj
         self.episode_stats["moved_wrong_obj"] = moved_wrong_obj
         self.episode_stats["src_on_target"] = src_on_target
