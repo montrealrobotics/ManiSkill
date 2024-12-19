@@ -74,9 +74,58 @@ class PutCarrotOnPlateInScene(BaseBridgeEnv):
 class PutCarrotOnPlateInSceneSep(PutCarrotOnPlateInScene):
     scene_setting = "sep_flat_table"
     rgb_always_overlay_objects = ["sep_flat_table"]
+    SUPPORTED_OBS_MODES = ["rgb+segmentation", "state", "state_dict"]
+    SUPPORTED_REWARD_MODES = ["sparse", "dense"]
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-    
+
+    def _get_obs_extra(self, info):
+        return {"source_obj_pose": self.objs[self.source_obj_name].pose.raw_pose,
+                "target_obj_pose": self.objs[self.target_obj_name].pose.p}
+
+    def evaluate(self):
+        info = super()._evaluate(
+            success_require_src_completely_on_target=True,
+        )
+        is_robot_static = self.agent.is_static(0.2)
+
+        info["success"] = info["src_on_target"] & is_robot_static
+        info["is_robot_static"] = is_robot_static
+        return info
+
+    def compute_dense_reward(self, obs, action, info):
+        source_object = self.objs[self.source_obj_name]
+        target_object = self.objs[self.target_obj_name]
+
+        # taken from pick cube task
+        # widowx does not support agent.tcp 
+        # maybe we can add it?
+
+        tcp_to_obj_dist = torch.linalg.norm(
+            source_object.pose.p - self.agent.tcp.pose.p, axis=1
+        )
+        reaching_reward = 1 - torch.tanh(5 * tcp_to_obj_dist)
+        reward = reaching_reward
+
+        is_grasped = info["is_src_obj_grasped"]
+        reward += is_grasped
+
+        obj_to_goal_dist = torch.linalg.norm(
+            target_object.pose.p - source_object.pose.p, axis=1
+        )
+        place_reward = 1 - torch.tanh(5 * obj_to_goal_dist)
+        reward += place_reward * is_grasped
+
+        static_reward = 1 - torch.tanh(
+            5 * torch.linalg.norm(self.agent.robot.get_qvel()[..., :-2], axis=1)
+        )
+
+        reward += static_reward * info["src_on_target"]
+
+
+        reward[info["success"]] = 5
+        return reward
+
 @register_env(
     "PutEggplantInBasketScene-v1",
     max_episode_steps=120,

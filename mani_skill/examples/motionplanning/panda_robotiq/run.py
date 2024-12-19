@@ -12,6 +12,7 @@ from mani_skill.trajectory.merge_trajectory import merge_trajectories
 from mani_skill.examples.motionplanning.panda_robotiq.solutions import solvePickCarrot, solvePickCube
 MP_SOLUTIONS = {
     "PutCarrotOnPlateInScene-v1": solvePickCarrot,
+    "PutCarrotOnPlateInSceneSep-v1": solvePickCarrot,
     "PickCube-v1": solvePickCube,
 }
 def parse_args(args=None):
