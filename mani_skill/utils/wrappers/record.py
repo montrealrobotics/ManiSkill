@@ -325,6 +325,7 @@ class RecordEpisode(gym.Wrapper):
 
     def capture_image(self):
         img = self.env.render()
+        # img = self.get_obs()["sensor_data"]["3rd_view_camera"]["rgb"]
         img = common.to_numpy(img)
         if len(img.shape) > 3:
             if len(img) == 1:

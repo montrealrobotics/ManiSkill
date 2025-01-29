@@ -199,10 +199,11 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
 
         ori_control_mode = ep["control_mode"]
 
+        # images = []
         for _ in range(args.max_retry + 1):
             # Each trial for each trajectory to replay, we reset the environment
             # and optionally set the first environment state
-            env.reset(seed=seed, **reset_kwargs)
+            _, _ = env.reset(seed=seed, **reset_kwargs)
             if ori_env is not None:
                 ori_env.reset(seed=seed, **reset_kwargs)
 
@@ -249,6 +250,7 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
                 n = len(ori_actions)
                 if pbar is not None:
                     pbar.reset(total=n)
+                # images.append(get_image_from_maniskill3_obs_dict(env, obs))
                 for t, a in enumerate(ori_actions):
                     if pbar is not None:
                         pbar.update()
@@ -257,6 +259,7 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
                         env.base_env.set_state_dict(ori_env_states[t])
                     if args.vis:
                         env.base_env.render_human()
+                    # images.append(get_image_from_maniskill3_obs_dict(env, obs))
 
             # From joint position to others
             elif ori_control_mode == "pd_joint_pos":
@@ -295,6 +298,9 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
                     env.flush_trajectory()
                 if args.save_video:
                     env.flush_video(ignore_empty_transition=False)
+                # if args.save_video:
+                #     for i in range(len(images[-1])):
+                #         images_to_video([img[i].cpu().numpy() for img in images], exp_dir, f"{sim_backend}_eval_{seed + i}_success={info['success'][i].item()}", fps=10, verbose=True)
                 break
             else:
                 if args.verbose:
