@@ -173,7 +173,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
     MODEL_JSON = "info_bridge_custom_v0.json"
     SUPPORTED_OBS_MODES = ["rgb+segmentation"]
     SUPPORTED_ROBOTS = ["widowx250s", "panda_robotiq"]
-    SUPPORTED_REWARD_MODES = ["none", "dense"]
+    SUPPORTED_REWARD_MODES = ["none", "sparse", "dense"]
     scene_setting: Literal["flat_table", "sink"] = "flat_table"
 
     obj_static_friction = 0.5
@@ -184,7 +184,7 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         obj_names: List[str],
         xyz_configs: torch.Tensor,
         quat_configs: torch.Tensor,
-        robot: str = "panda_robotiq",
+        robot: str = "widowx250s",
         **kwargs,
     ):
         self.objs: Dict[str, Actor] = dict()
@@ -226,8 +226,22 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
         self.model_db: Dict[str, Dict] = io_utils.load_json(
             BRIDGE_DATASET_ASSET_PATH / "custom/" / self.MODEL_JSON
         )
+
+        self.consecutive_grasp = torch.zeros((num_envs,), dtype=torch.int32, device="cuda")
+        self.episode_stats = dict(
+            # all_obj_keep_height=torch.zeros((num_envs,), dtype=torch.bool),
+            moved_correct_obj=torch.zeros((num_envs,), dtype=torch.bool, device="cuda"),
+            moved_wrong_obj=torch.zeros((num_envs,), dtype=torch.bool, device="cuda"),
+            # near_tgt_obj=torch.zeros((num_envs,), dtype=torch.bool),
+            is_src_obj_grasped=torch.zeros((num_envs,), dtype=torch.bool, device="cuda"),
+            # is_closest_to_tgt=torch.zeros((num_envs,), dtype=torch.bool),
+            consecutive_grasp=torch.zeros((num_envs,), dtype=torch.bool, device="cuda"),
+            src_on_target=torch.zeros((num_envs,), dtype=torch.bool, device="cuda"),
+        )
+
         super().__init__(
             robot_uids=robot_cls,
+            num_envs=num_envs,
             **kwargs,
         )
 
@@ -512,17 +526,13 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
             )[0, :, 0]
             """target object bbox size (3, )"""
 
-            # stats to track
-            self.consecutive_grasp = torch.zeros((b,), dtype=torch.int32)
-            self.episode_stats = dict(
-                # all_obj_keep_height=torch.zeros((b,), dtype=torch.bool),
-                moved_correct_obj=torch.zeros((b,), dtype=torch.bool),
-                moved_wrong_obj=torch.zeros((b,), dtype=torch.bool),
-                # near_tgt_obj=torch.zeros((b,), dtype=torch.bool),
-                is_src_obj_grasped=torch.zeros((b,), dtype=torch.bool),
-                # is_closest_to_tgt=torch.zeros((b,), dtype=torch.bool),
-                consecutive_grasp=torch.zeros((b,), dtype=torch.bool),
-            )
+            # reset stats
+            self.consecutive_grasp[env_idx] = 0
+            self.episode_stats["moved_correct_obj"][env_idx] = 0
+            self.episode_stats["moved_wrong_obj"][env_idx] = 0
+            self.episode_stats["is_src_obj_grasped"][env_idx] = 0
+            self.episode_stats["consecutive_grasp"][env_idx] = 0
+            self.episode_stats["src_on_target"][env_idx] = 0
 
     def _settle(self, t: int = 0.5):
         """run the simulation for some steps to help settle the objects"""
@@ -557,21 +567,27 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
                     obj_xyz_after_settle[:, :2] - obj.pose.p[:, :2], dim=1
                 )
             )
-        # moved_correct_obj = (source_obj_xy_move_dist > 0.03) and (
-        #     all([x < source_obj_xy_move_dist for x in other_obj_xy_move_dist])
-        # )
-        # moved_wrong_obj = any([x > 0.03 for x in other_obj_xy_move_dist]) and any(
-        #     [x > source_obj_xy_move_dist for x in other_obj_xy_move_dist]
-        # )
+        moved_correct_obj = source_obj_xy_move_dist > 0.03
+        moved_correct_obj &= torch.all(
+            torch.stack([x < source_obj_xy_move_dist for x in other_obj_xy_move_dist]),
+            axis=0
+        )
+        moved_wrong_obj = torch.any(
+            torch.stack([x > 0.03 for x in other_obj_xy_move_dist]),
+            axis=0
+        ) 
+        moved_wrong_obj &= torch.any(
+            torch.stack([x > source_obj_xy_move_dist for x in other_obj_xy_move_dist]),
+            axis=0
+        )
         # moved_correct_obj = False
         # moved_wrong_obj = False
 
         # whether the source object is grasped
         is_src_obj_grasped = self.agent.is_grasping(source_object)
-        # if is_src_obj_grasped:
-        self.consecutive_grasp += is_src_obj_grasped
-        self.consecutive_grasp[is_src_obj_grasped == 0] = 0
-        consecutive_grasp = self.consecutive_grasp >= 5
+        # self.consecutive_grasp += is_src_obj_grasped
+        # self.consecutive_grasp[is_src_obj_grasped == 0] = 0
+        # consecutive_grasp = self.consecutive_grasp >= 5
 
         # whether the source object is on the target object based on bounding box position
         tgt_obj_half_length_bbox = (
@@ -603,18 +619,26 @@ class BaseBridgeEnv(BaseDigitalTwinEnv):
 
         success = src_on_target
 
-        # self.episode_stats["moved_correct_obj"] = moved_correct_obj
-        # self.episode_stats["moved_wrong_obj"] = moved_wrong_obj
+        self.episode_stats["moved_correct_obj"] = moved_correct_obj
+        self.episode_stats["moved_wrong_obj"] = moved_wrong_obj
         self.episode_stats["src_on_target"] = src_on_target
         self.episode_stats["is_src_obj_grasped"] = (
             self.episode_stats["is_src_obj_grasped"] | is_src_obj_grasped
         )
-        self.episode_stats["consecutive_grasp"] = (
-            self.episode_stats["consecutive_grasp"] | consecutive_grasp
-        )
+        # self.episode_stats["consecutive_grasp"] = (
+        #     self.episode_stats["consecutive_grasp"] | consecutive_grasp
+        # )
 
         return dict(**self.episode_stats, success=success)
 
     def is_final_subtask(self):
         # whether the current subtask is the final one, only meaningful for long-horizon tasks
         return True
+
+    def compute_dense_reward(self, obs, action: torch.Tensor, info: Dict):
+        return (
+            0.01 * info["moved_correct_obj"]
+            - 0.01 * info["moved_wrong_obj"]
+            + 0.5 * info["is_src_obj_grasped"]
+            + 1.0 * info["success"]
+        )
