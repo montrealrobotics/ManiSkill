@@ -6,7 +6,7 @@ from mani_skill import ASSET_DIR
 from mani_skill.agents.base_agent import BaseAgent
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
-from mani_skill.utils import common
+from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.structs.actor import Actor
 
 
@@ -26,10 +26,14 @@ class WidowX250S(BaseAgent):
         "wrist_rotate",
     ]
     gripper_joint_names = ["left_finger", "right_finger"]
+    ee_link_name = "ee_gripper_link"
 
     def _after_loading_articulation(self):
         self.finger1_link = self.robot.links_map["left_finger_link"]
         self.finger2_link = self.robot.links_map["right_finger_link"]
+        self.tcp = sapien_utils.get_obj_by_name(
+            self.robot.get_links(), self.ee_link_name
+        )
 
     def is_grasping(self, object: Actor, min_force=0.5, max_angle=85):
         """Check if the robot is grasping an object
@@ -60,3 +64,15 @@ class WidowX250S(BaseAgent):
             rforce >= min_force, torch.rad2deg(rangle) <= max_angle
         )
         return torch.logical_and(lflag, rflag)
+    
+    @staticmethod
+    def build_grasp_pose(approaching, closing, center):
+        """Build a grasp pose (robotiq_hand_tcp)."""
+        assert np.abs(1 - np.linalg.norm(approaching)) < 1e-3
+        assert np.abs(1 - np.linalg.norm(closing)) < 1e-3
+        assert np.abs(approaching @ closing) <= 1e-3
+        ortho = np.cross(closing, approaching)
+        T = np.eye(4)
+        T[:3, :3] = np.stack([ortho, closing, approaching], axis=1)
+        T[:3, 3] = center
+        return sapien.Pose(T)

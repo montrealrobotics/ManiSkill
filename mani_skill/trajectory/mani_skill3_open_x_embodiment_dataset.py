@@ -5,6 +5,7 @@ Code for converting to the Open-X Embodiment dataset format using RLDS from Mani
 from typing import Any, Iterator, Tuple
 
 import cv2
+from skimage.transform import resize
 import h5py
 import numpy as np
 import tensorflow as tf
@@ -69,6 +70,7 @@ class ManiSkill3OpenXEmbodimentDataset(tfds.core.GeneratorBasedBuilder):
             "StackCube-v1": "Stack the red cube on top of the green cube.",
             "PlugCharger-v1": "Plug the charger into the wall socket.",
             "PegInsertionSide-v1": "Insert the peg into the horizontal hole in a box.",
+            "PutCarrotOnPlateInScene-v1": "Place the carrot on the plate.",
             # "LiftCube-v0": "Lift up the red cube by 0.2 meters.",
             # "PickCube-v0": "Pick up the red cube and move it to a goal position.",
             # "StackCube-v0": "Stack the red cube on top of the green cube.",
@@ -86,6 +88,7 @@ class ManiSkill3OpenXEmbodimentDataset(tfds.core.GeneratorBasedBuilder):
             "StackCube-v1": None,
             "PlugCharger-v1": None,
             "PegInsertionSide-v1": None,
+            "PutCarrotOnPlateInScene-v1": None,
             # "LiftCube-v0": None,
             # "PickCube-v0": None,
             # "StackCube-v0": None,
@@ -109,6 +112,7 @@ class ManiSkill3OpenXEmbodimentDataset(tfds.core.GeneratorBasedBuilder):
             "StackCube-v1": np.zeros(7, dtype=np.uint8),
             "PlugCharger-v1": np.zeros(7, dtype=np.uint8),
             "PegInsertionSide-v1": np.zeros(7, dtype=np.uint8),
+            "PutCarrotOnPlateInScene-v1": np.zeros(7, dtype=np.uint8),
             # "LiftCube-v0": np.zeros(7, dtype=np.uint8),
             # "PickCube-v0": np.zeros(7, dtype=np.uint8),
             # "StackCube-v0": np.zeros(7, dtype=np.uint8),
@@ -128,6 +132,7 @@ class ManiSkill3OpenXEmbodimentDataset(tfds.core.GeneratorBasedBuilder):
             "StackCube-v1": None,
             "PlugCharger-v1": None,
             "PegInsertionSide-v1": None,
+            "PutCarrotOnPlateInScene-v1": None,
             # "LiftCube-v0": None,
             # "PickCube-v0": lambda obs, i: np.concatenate(
             #     [obs["extra/goal_pos"][i], [1, 0, 0, 0]]
@@ -162,6 +167,7 @@ class ManiSkill3OpenXEmbodimentDataset(tfds.core.GeneratorBasedBuilder):
             "StackCube-v1": np.array([1, 1, 1, 0, 0, 0, 0], dtype=np.uint8),
             "PlugCharger-v1": np.zeros(7, dtype=np.uint8),
             "PegInsertionSide-v1": np.zeros(7, dtype=np.uint8),
+            "PutCarrotOnPlateInScene-v1": np.zeros(7, dtype=np.uint8),
             # "LiftCube-v0": np.zeros(7, dtype=np.uint8),
             # "PickCube-v0": np.array([1, 1, 1, 0, 0, 0, 0], dtype=np.uint8),
             # "StackCube-v0": np.zeros(7, dtype=np.uint8),
@@ -358,12 +364,9 @@ class ManiSkill3OpenXEmbodimentDataset(tfds.core.GeneratorBasedBuilder):
     def _split_generators(self, dl_manager: tfds.download.DownloadManager):
         """Define data splits."""
         # data_root = self.data_path
-        data_root = "/home/stao/.maniskill/demos/"
+        data_root = "/home/artur/"
         paths = [
-            "PickCube-v1/motionplanning/trajectory.rgbd.pd_ee_target_delta_pose.cpu.h5",
-            "StackCube-v1/motionplanning/trajectory.rgbd.pd_ee_target_delta_pose.cpu.h5",
-            "PlugCharger-v1/motionplanning/trajectory.rgbd.pd_ee_target_delta_pose.cpu.h5",
-            "PegInsertionSide-v1/motionplanning/trajectory.rgbd.pd_ee_target_delta_pose.cpu.h5",
+            "ManiSkill/mani_skill/examples/motionplanning/panda_robotiq/demos/PutCarrotOnPlateInScene-v1/motionplanning/20241121_140851.h5",
             # "LiftCube-v0/trajectory.rgbd.pd_base_ee_target_delta_pose.h5",
             # "PickCube-v0/trajectory.rgbd.pd_base_ee_target_delta_pose.h5",
             # "StackCube-v0/trajectory.rgbd.pd_base_ee_target_delta_pose.h5",
@@ -383,7 +386,7 @@ class ManiSkill3OpenXEmbodimentDataset(tfds.core.GeneratorBasedBuilder):
         # }
         return {
             # 'train': self._generate_examples(path='data/train/LiftCube-v0/trajectory.rgbd.pd_joint_pos.h5'),
-            "train": self._generate_examples(env_names, paths),
+            "train": self._generate_examples(["PutCarrotOnPlateInScene-v1"], paths),
         }
 
     def _generate_examples(self, env_names, paths) -> Iterator[Tuple[str, Any]]:
@@ -419,25 +422,34 @@ class ManiSkill3OpenXEmbodimentDataset(tfds.core.GeneratorBasedBuilder):
             ep_len = actions.shape[0] + 1
 
             for i in range(ep_len):
-                base_image = obs["sensor_data"]["base_camera"]["rgb"][i]
-                base_depth = obs["sensor_data"]["base_camera"]["depth"][i]
+                base_image = obs["sensor_data"]["3rd_view_camera"]["rgb"][i]
+                if base_image.shape[1] != 256 or base_image.shape[2]:
+                    base_image = resize(base_image, (256, 256)).astype(np.uint8)
+
+                if "depth" in obs["sensor_data"]["3rd_view_camera"]: 
+                    base_depth = obs["sensor_data"]["3rd_view_camera"]["depth"][i]
+                else:
+                    base_depth = np.zeros((256, 256, 1), dtype=np.uint16)
                 if "hand_camera" in obs["sensor_data"]:
                     wrist_image = obs["sensor_data"]["hand_camera"]["rgb"][i]
                     wrist_depth = obs["sensor_data"]["hand_camera"]["depth"][i]
                 else:
                     wrist_image = np.zeros((256, 256, 3), dtype=np.uint8)
                     wrist_depth = np.zeros((256, 256, 1), dtype=np.uint16)
-                qpos = obs["agent"]["qpos"][i]
-                qvel = obs["agent"]["qvel"][i]
-                tcp_pose = obs["extra"]["tcp_pose"][i]
+                qpos = obs["agent"]["qpos"][i,[0,1,2,3,4,5,6,7,10]]
+                qvel = obs["agent"]["qvel"][i,[0,1,2,3,4,5,6,7,10]]
+                if "tcp_pose" in obs["extra"]:
+                    tcp_pose = obs["extra"]["tcp_pose"][i]
+                else:
+                    tcp_pose = np.zeros((7,), dtype=np.float32)
 
-                main_camera_extrinsic_cv = obs["sensor_param"]["base_camera"][
+                main_camera_extrinsic_cv = obs["sensor_param"]["3rd_view_camera"][
                     "extrinsic_cv"
                 ][i]
-                main_camera_intrinsic_cv = obs["sensor_param"]["base_camera"][
+                main_camera_intrinsic_cv = obs["sensor_param"]["3rd_view_camera"][
                     "intrinsic_cv"
                 ][i]
-                main_camera_cam2world_gl = obs["sensor_param"]["base_camera"][
+                main_camera_cam2world_gl = obs["sensor_param"]["3rd_view_camera"][
                     "cam2world_gl"
                 ][i]
                 if "hand_camera" in obs["sensor_param"]:
@@ -469,7 +481,7 @@ class ManiSkill3OpenXEmbodimentDataset(tfds.core.GeneratorBasedBuilder):
                     target_object_or_part_final_pose = np.zeros(7, dtype=np.float32)
 
                 if i < ep_len - 1:
-                    action = actions[i]  # [7]
+                    action = actions[i][:7]  # [7]
                 else:
                     action = np.zeros(7, dtype=np.float32)
                 episode.append(
@@ -529,3 +541,7 @@ class ManiSkill3OpenXEmbodimentDataset(tfds.core.GeneratorBasedBuilder):
                 yield _parse_example(
                     {"env_name": env_name, "h5_path": path, "episode_id": episode_id}
                 )
+
+openx_dataset = ManiSkill3OpenXEmbodimentDataset(data_root="/home/artur")
+gen = openx_dataset._split_generators(None)
+a = list(gen["train"])

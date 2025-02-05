@@ -12,8 +12,7 @@ from sapien.physx import PhysxMaterial
 from transforms3d.quaternions import quat2mat
 
 from mani_skill import ASSET_DIR, PACKAGE_ASSET_DIR
-from mani_skill.agents.controllers.pd_ee_pose import PDEEPoseControllerConfig
-from mani_skill.agents.controllers.pd_joint_pos import PDJointPosMimicControllerConfig
+from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
 from mani_skill.agents.robots.widowx.widowx import WidowX250S
 from mani_skill.agents.robots.panda_robotiq_2f_85.panda_robotiq_2f_85 import (
@@ -113,6 +112,15 @@ class WidowX250SBridgeDatasetFlatTable(WidowX250S):
         arm_pd_ee_target_delta_pose_align2 = PDEEPoseControllerConfig(
             **arm_common_kwargs, use_target=True
         )
+        arm_pd_joint_pos = PDJointPosControllerConfig(
+            self.arm_joint_names,
+            lower=None,
+            upper=None,
+            stiffness=self.arm_stiffness,
+            damping=self.arm_damping,
+            force_limit=self.arm_force_limit,
+            normalize_action=False,
+        )
 
         extra_gripper_clearance = 0.001  # since real gripper is PID, we use extra clearance to mitigate PD small errors; also a trick to have force when grasping
         gripper_pd_joint_pos = PDJointPosMimicControllerConfig(
@@ -125,10 +133,12 @@ class WidowX250SBridgeDatasetFlatTable(WidowX250S):
             normalize_action=True,
             drive_mode="force",
         )
-        controller = dict(
-            arm=arm_pd_ee_target_delta_pose_align2, gripper=gripper_pd_joint_pos
+
+        controller_configs = dict(
+            arm_pd_ee_target_delta_pose_align2_gripper_pd_joint_pos=dict(arm=arm_pd_ee_target_delta_pose_align2, gripper=gripper_pd_joint_pos),
+            pd_joint_pos=dict(arm=arm_pd_joint_pos, gripper=gripper_pd_joint_pos),
         )
-        return dict(arm_pd_ee_target_delta_pose_align2_gripper_pd_joint_pos=controller)
+        return deepcopy_dict(controller_configs)
 
 
 # Tuned for the sink setup

@@ -76,15 +76,15 @@ class PandaRobotiq(BaseAgent):
     #     707.7313445520906,
     # ]
     arm_damping = 1e2
-    arm_damping = [
-        110.91641016880158,
-        76.60497601124099,
-        186.18323463746594,
-        50.0,
-        250.0,
-        250.0,
-        156.0774747573599,
-    ]
+    # arm_damping = [
+    #     110.91641016880158,
+    #     76.60497601124099,
+    #     186.18323463746594,
+    #     50.0,
+    #     250.0,
+    #     250.0,
+    #     156.0774747573599,
+    # ]
     arm_force_limit = 100
 
     gripper_stiffness = 1e5
@@ -253,7 +253,7 @@ class PandaRobotiq(BaseAgent):
             pd_ee_delta_pose=dict(
                 arm=arm_pd_ee_delta_pose,
                 gripper=gripper_pd_joint_pos,
-                passive_finger_joints=passive_finger_joints,
+                # passive_finger_joints=passive_finger_joints,
             ),
             pd_ee_pose=dict(arm=arm_pd_ee_pose, gripper=gripper_pd_joint_pos),
             # TODO(jigu): how to add boundaries for the following controllers
